@@ -1,5 +1,7 @@
 <?php
-echo "Hello World1";
+// This script is the modified version of "submit.php" provided by Jeremy Hajek.
+
+echo "Hello";
 session_start();
 var_dump($_POST);
 if(!empty($_POST)){
@@ -25,7 +27,7 @@ if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploadfile)) {
 }
 
 else {
-    echo "Possible file upload attack!\n";
+    echo "Possible file upload! \n";
 }
 
 echo 'Here is some more debugging info:';
@@ -33,15 +35,18 @@ print_r($_FILES);
 print "</pre>";
 
 require 'vendor/autoload.php';
-
+#use Aws\S3\S3Client;
+#$client = S3Client::factory();
 $s3 = new Aws\S3\S3Client([
     'version' => 'latest',
     'region'  => 'us-east-1'
 ]);
 #print_r($s3);
-
-$bucket = uniqid("Sneha",false);
-
+$bucket = uniqid("CharlieBucketsGallore",false);
+#$result = $s3->createBucket(array(
+#    'Bucket' => $bucket
+#));
+#
 ## AWS PHP SDK version 3 create bucket
 $result = $s3->createBucket([
     'ACL' => 'public-read',

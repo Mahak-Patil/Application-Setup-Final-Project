@@ -40,7 +40,7 @@ $endpoint = $result['DBInstances'][0]['Endpoint']['Address'];
     echo "============\n". $endpoint . "================";
 
 //echo "begin database";
-$link = mysqli_connect($endpoint,"controller","ilovebunnies","ITMO544DatabaseProject") or die("Error " . mysqli_error($link));
+$link = mysqli_connect($endpoint,"controller","ilovebunnies","CloudProject") or die("Error " . mysqli_error($link));
 
 //below line is unsafe - $email is not checked for SQL injection -- don't do this in real life or use an ORM instead
 
