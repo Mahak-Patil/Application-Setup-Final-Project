@@ -56,7 +56,7 @@ echo $row['id'] . "Email: " . $row['email'];
 }
 else
 {
-$link->real_query("SELECT raws3url FROM ITM0-544-Table);
+$link->real_query("SELECT rawS3Url FROM ITM0-544-Table);
 $res = $link->use_result();
 echo "Result set order...\n";
 while ($row = $res->fetch_assoc()) {
