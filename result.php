@@ -42,7 +42,7 @@ $s3 = new Aws\S3\S3Client([
     'region'  => 'us-east-1'
 ]);
 #print_r($s3);
-$bucket = uniqid("CharlieBucketsGallore",false);
+$bucket = uniqid("CharlieBucketsGallore3",false);
 #$result = $s3->createBucket(array(
 #    'Bucket' => $bucket
 #));
@@ -56,33 +56,34 @@ $result = $s3->createBucket([
 $result = $s3->putObject([
     'ACL' => 'public-read',
     'Bucket' => $bucket,
-   'Key' => $uploadfile,
+   'Key' => "RawURL".$uploadfile,
 'ContentType' => $_FILES['userfile']['type'],
 'Body' => fopen($uploadfile,'r+')
 ]);
 $url = $result['ObjectURL'];
 echo $url;
 
-##s3 and url for the thumbnailimage
+##new code for image and bucket
 $thumbimageobj = new Imagick($uploadfile);
-$thumbimageobj->thumbnailImage(200, null);
+$thumbimageobj->thumbnailImage(80, 80);
+$thumbimageobj->writeImage();
 
-$bucketfinished=uniquid("finishedimage",false);
-$resultfinished = $s3->createBucket([
-    'ACL' => 'public-read',
-    'Bucket' => $bucketfinished
-]);
+//$bucketfinished=uniquid("finishedimage",false);
+//$resultfinished = $s3->createBucket([
+//    'ACL' => 'public-read',
+//    'Bucket' => $bucketfinished
+//]);
 #print_r($resultfinished);
 $resultfinished = $s3->putObject([
     'ACL' => 'public-read',
-    'Bucket' => $bucketfinished,
-   'Key' => $thumbimageobj,
+    'Bucket' => $bucket,
+   'Key' => "Finished URL: ".$uploadfile,
 'ContentType' => $_FILES['userfile']['type'],
-'Body' => fopen($thumbimageobj,'r+')
+'Body' => fopen($uploadfile,'r+')
 ]);
 $finishedurl = $resultfinished['ObjectURL'];
 echo $finishedurl;
-
+$temporary_email = $_POST['useremail'];
 //thumbnail code ends here
 
 $rds = new Aws\Rds\RdsClient([
@@ -91,13 +92,12 @@ $rds = new Aws\Rds\RdsClient([
 ]);
 
 $result = $rds->describeDBInstances(array(
-    'DBInstanceIdentifier' => 'db1'
-   
+    'DBInstanceIdentifier' => 'ITMO-544-Database'
 ));
 $endpoint = $result['DBInstances'][0]['Endpoint']['Address'];
     echo "============\n". $endpoint . "================";
 
-$link = mysqli_connect($endpoint,"testconnection1","testconnection1","Project1");
+$link = mysqli_connect($endpoint,"controller","ilovebunnies","CloudProject");
 
 if (mysqli_connect_errno()) {
     printf("Connect failed: %s\n", mysqli_connect_error());
@@ -119,35 +119,54 @@ $sns = new Aws\Sns\SnsClient([
 //echo "sns Topic";
 //to list topics
 
-$result = $sns->listTopics(array(
+$SNSresult = $sns->listTopics(array(
 
 ));
 
 
-foreach ($result['Topics'] as $key => $value){
+foreach ($SNSresult['Topics'] as $key => $value){
 
-if(preg_match("/ImageTopicSK/", $result['Topics'][$key]['TopicArn'])){
-$topicARN =$result['Topics'][$key]['TopicArn'];
+if(preg_match("/ImageTopicSK/", $SNSresult['Topics'][$key]['TopicArn'])){
+$topicARN =$SNSresult['Topics'][$key]['TopicArn'];
 }
 }
 
-$uname=$_POST['username'];
+#MORE NEW CODE
+$SUBSresult = $sns->listSubscriptionsByTopic(array(
+     //TopicArn is required
+    'TopicArn' => $topicARN,
+   
+));
+foreach ($SUBSresult['Subscriptions'] as $key => $value){
+
+if((preg_match($temporary_email, $SUBSresult['Subscriptions'][$key]['endpoint']))&&(preg_match("PendingConfirmation", $SUBSresult['Subscriptions'][$key]['SubscriptionArn']))){
+$alertmsg='true';
+$_SESSION['alertmsg']=$alertmsg;
+}
+else{
+$alertmsg='false';
+$_SESSION['alertmsg']=$alertmsg;
+}
+}
+
+
+$uName=$_POST['username'];
 $email = $_POST['useremail'];
-$phoneforsms = $_POST['phone'];
-$raws3url = $url; 
-$finisheds3url =$finishedurl;
-$jpegfilename = basename($_FILES['userfile']['name']);
+$phone = $_POST['phone'];
+$rawS3Url = $url; 
+$finishedS3Url =$finishedurl;
+$jpgfilename = basename($_FILES['userfile']['name']);
 $state=0;
 
-$res = $link->query("SELECT * FROM MiniProject1 where email='$email'");
+$res = $link->query("SELECT * FROM ITMO-544-Table where email='$email'");
 
 if($res->num_rows>0){
 
-if (!($stmt = $link->prepare("INSERT INTO MiniProject1 (uname,email,phoneforsms,raws3url,finisheds3url,jpegfilename,state) VALUES (?,?,?,?,?,?,?)"))) {
+if (!($stmt = $link->prepare("INSERT INTO ITMO-544-Table (uName,email,phone,rawS3Url,finishedS3Url,jpgFileName,state) VALUES (?,?,?,?,?,?,?)"))) {
     echo "Prepare failed: (" . $link->errno . ") " . $link->error;
 }
 
-$stmt->bind_param("ssssssi",$uname,$email,$phoneforsms,$raws3url,$finisheds3url,$jpegfilename,$state);
+$stmt->bind_param("ssssssi",$uName,$email,$phone,$rawS3Url,$finishedS3Url,$jpgFileName,$state);
 if (!$stmt->execute()) {
     echo "Execute failed: (" . $stmt->errno0 . ") " . $stmt->error;
 }
@@ -158,18 +177,17 @@ $stmt->close();
 
 $pub = $sns->publish(array(
     'TopicArn' => $topicARN,
-    // Message is required
-    'Subject' => 'Image Upload Notification',
-    'Message' => 'Image is successfully uploaded and saved!',
+    'Subject' => 'ITMO-544-Notification for image upload',
+    'Message' => 'Imae uploaded successfully.',
     
     
 ));
 
-$link->real_query("SELECT * FROM MiniProject1");
+$link->real_query("SELECT * FROM ITMO-544-Table");
 $res = $link->use_result();
 echo "Result set order...\n";
 while ($row = $res->fetch_assoc()) {
-    echo $row['id'] . " " . $row['email']. " " . $row['phoneforsms'];
+    echo $row['id'] . " " . $row['email']. " " . $row['phone'];
 }
 
 $link->close();
@@ -181,7 +199,7 @@ $url	= "gallery.php";
 else 
 {
 
-$url	= "temp.php";
+$url	= "gohere.php";
    header('Location: ' . $url, true);
    die();
 
