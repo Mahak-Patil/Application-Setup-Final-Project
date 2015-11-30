@@ -16,7 +16,13 @@ $result = $rds->describeDBInstances(array(
 ));
 $endpoint = $result['DBInstances'][0]['Endpoint']['Address'];
 echo "============\n". $endpoint . "================";
-$link = mysqli_connect($endpoint,"controller","ilovebunnies","CloudProject") or die("Error " . mysqli_error($link)); 
+
+$link = new mysqli($endpoint,"controller","ilovebunnies","CloudProject") or die("Error " . mysqli_error($link)); 
+
+$sql = "DROP TABLE IF EXISTS ITMO-544-Table";
+if(!mysqli_query($link, $sql)) {
+   echo "Error : " . mysqli_error($link);
+} 
 
 $link->query("CREATE TABLE ITMO-544-Table 
 (
