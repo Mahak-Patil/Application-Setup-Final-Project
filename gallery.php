@@ -7,70 +7,74 @@
   <script src="fotorama.js"></script>
 </head>
 <body>
-<div class="fotorama" data-width="700" data-ratio="700/467" data-max-width="100%">
 
 <?php
 // NOTE: code provided by Jeremy Hajek is modified.
 session_start();
-if(isset($_SESSION['firstname']){
-$username=$_SESSION['firstname'];
-}
-else
-{
-$username="guest";
-}
-echo $email;
+
 require 'vendor/autoload.php';
-//create client for s3 bucket
-//use Aws\Rds\RdsClient;
-//$client = RdsClient::factory(array(
-//'region'  => 'us-east-1'
-//));
 
 $rds = new Aws\Rds\RdsClient([
     'version' => 'latest',
     'region'  => 'us-east-1'
 ]);
 
-$result = $rds->describeDBInstances(array(
+$DBresult = $rds->describeDBInstances(array(
     'DBInstanceIdentifier' => 'ITMO-544-Database'
    
 ));
-$endpoint = $result['DBInstances'][0]['Endpoint']['Address'];
+$DBendpoint = $DBresult['DBInstances'][0]['Endpoint']['Address'];
     echo "============\n". $endpoint . "================";
 
 //echo "begin database";
-$link = mysqli_connect($endpoint,"controller","ilovebunnies","CloudProject") or die("Error " . mysqli_error($link));
+$DBlink = mysqli_connect($DBendpoint,"controller","ilovebunnies","CloudProject") or die("Error " . mysqli_error($link));
 
-//below line is unsafe - $email is not checked for SQL injection -- don't do this in real life or use an ORM instead
+if(isset($_SESSION['useremail'])){
+$email=$_SESSION['useremail'];
+//echo $email;
+$DBlink->real_query("SELECT * FROM ITMO-544-Table where email='$email'");
+$DBres = $DBlink->use_result();
 
-if($username!="guest"){
-$link->real_query("SELECT * FROM ITM0-544-Table where uName=$username");
-$res = $link->use_result();
-echo "Result set order...\n";
-while ($row = $res->fetch_assoc()) {
+//echo "Result set order...\n";
+echo '<div align="left" class="fotorama" data-width="100" data-ratio="100/46" data-max-width="50%">';
+while ($row = $DBres->fetch_assoc()) {
 
-    echo "<img src =\" " . $row['rawS3Url'] . "\" /><img src =\"" .$row['finishedS3Url'] . "\"/>";
-echo $row['id'] . "Email: " . $row['email'];
+    echo "<img src =\"" .$row['finishedS3Url'] . "\"/>";
+
 }
+echo'</div';
 }
+
 else
 {
-$link->real_query("SELECT rawS3Url FROM ITM0-544-Table);
-$res = $link->use_result();
-echo "Result set order...\n";
-while ($row = $res->fetch_assoc()) {
+echo "Error! No image entered";
+
+$DBlink->real_query("SELECT rawS3Url FROM ITMO-544-Table");
+$DBres = $DBlink->use_result();
+//echo "Result set order...\n";
+echo '<div align="right" class="fotorama" data-width="700" data-ratio="700/467" data-max-width="50%">';
+while ($row = $DBres->fetch_assoc()) {
 
     echo "<img src =\" " . $row['rawS3Url'] . "\" />";
+    
+}
+
+echo'</div>';
 
 }
+
+echo '<div class="errormsg">';
+if((isset($_SESSION['alertmsg']))&&($_SESSION['alertmsg'])){
+echo "YOU NEED TO SUBSCRIBE TO RECEIVE NOTIFICATIONS!";
 }
+echo '</div>';
 
-$link->close();
-
-
+$DBlink->close();
+session_unset();
+echo "<a href='index.php'/>Home</a>"
 ?>
 
-</div>
+
+
 </body>
 </html>
